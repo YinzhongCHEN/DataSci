@@ -1,5 +1,5 @@
 import argparse
-from exectue import execute_sql_with_all_support
+from exectue import execute_sql_with_all_support,compare_pandas_tensor
 def main():
     parser = argparse.ArgumentParser(description="支持窗口函数、聚合、投影、排序的 SQL 处理器")
     parser.add_argument(
@@ -29,15 +29,22 @@ def main():
         "orders":    r"D:\DataSci\data\orders.csv"
         # 你可以继续添加其它表
     }
-
-    # df_result, 
-    tensor_result = execute_sql_with_all_support(
-        sql=args.sql,
-        table_to_path=table_to_path,
-        order_by=args.order_by,
-        descending=args.desc,
-        nrows=args.nrows
-    )
+    # tensor 执行
+    # tensor_result = execute_sql_with_all_support(
+    #     sql=args.sql,
+    #     table_to_path=table_to_path,
+    #     order_by=args.order_by,
+    #     descending=args.desc,
+    #     nrows=args.nrows
+    # )
+    # 对比执行
+    compare_pandas_tensor(
+            args.sql,
+            table_to_path,
+            order_by=args.order_by,
+            descending=args.desc,
+            nrows=args.nrows
+        )
 
     # print("\n===== 最终返回 DataFrame =====")
     # print(df_result.head())
