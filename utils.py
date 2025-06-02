@@ -57,27 +57,3 @@ def load_data(csv_path,usecols, nrows=None):
         print("CUDA 设备名称：", torch.cuda.get_device_name(torch.cuda.current_device()))
     
     return tensors, df
-
-def all_match(df1,df2,sort_key):
-    all_match = True
-    for col in sort_key:
-        # 从张量里取出已排序的这一列，搬回 CPU，转换为 numpy
-        tensor_vals = df1[col].cpu().numpy()
-        # 从 Pandas 排序后结果里取对应列（已经 reset_index）
-        df_vals = df2[col].to_numpy()
-
-        if tensor_vals.shape != df_vals.shape or not (tensor_vals == df_vals).all():
-            print(f"❌ 列 {col} 排序结果不一致！")
-            # 如果要查看前几个不匹配的索引，可以这样打印：
-            diffs = (tensor_vals != df_vals).nonzero()[0]
-            print(f"   不一致的行索引示例（Tensor vs DataFrame）：")
-            for idx in diffs[:5]:
-                print(f"     idx={idx}: tensor={tensor_vals[idx]}  pandas={df_vals[idx]}")
-            all_match = False
-        else:
-            print(f"✅ 列 {col} 排序结果一致。")
-
-    if all_match:
-        print("\n🎉 所有列的排序结果完全一致！")
-    else:
-        print("\n⚠️ 存在不一致，请检查数据或排序逻辑。")

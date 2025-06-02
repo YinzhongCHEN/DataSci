@@ -255,3 +255,105 @@ def parse_sql_select_with_from(sql: str):
         where_pred = current
 
     return table_name, select_cols, where_pred, None, None, False
+def parse_sql_with_window(sql: str):
+    """
+    把带窗口函数 ROW_NUMBER() OVER (PARTITION BY grp_col ORDER BY sort_col DESC) 
+    的简单 SELECT 语句解析成：
+      (table_name, select_cols, where_pred, window_grp_col, window_sort_col, is_window, rest...)
+    如果输入 SQL 不包含 ROW_NUMBER() OVER(...)，则返回 (None, None, None, None, None, False)
+    其余字段留空，由调用方退回去 parse_sql_with_agg。
+
+    支持格式：
+      SELECT col1, col2, ..., ROW_NUMBER() OVER (PARTITION BY grp_col ORDER BY sort_col DESC) AS row_num
+      FROM table_name
+      [WHERE cond [AND|OR cond ...]];
+
+    返回：
+      - table_name:       表名
+      - select_cols:      普通列列表，不含窗口函数那一列
+      - where_pred:       WHERE 逻辑表达式元组，或 None
+      - window_grp_col:   PARTITION BY 后的分组列名
+      - window_sort_col:  ORDER BY 后的排序列名
+      - is_window:        True/False
+      - alias_for_window: 窗口函数的列别名（如'row_num'）；如果没有 AS 片段，则取 None
+    """
+    sql = sql.strip().rstrip(";").strip()
+    # 给比较运算符两侧加空格，方便后续解析 WHERE
+    def add_spaces(s: str) -> str:
+        s = re.sub(r"(>=|<=|!=|==)", r" \1 ", s)
+        s = re.sub(r"(?<![><!=])([><=])(?![>=!=])", r" \1 ", s)
+        return s
+
+    # 先拆出 SELECT ... FROM ... [WHERE ...] 这三段
+    pattern_main = re.compile(
+        r"SELECT\s+(?P<body>.*?)\s+FROM\s+(?P<table>\S+)"
+        r"(?:\s+WHERE\s+(?P<where>.*))?$",
+        flags=re.IGNORECASE | re.DOTALL
+    )
+    m = pattern_main.match(sql)
+    if not m:
+        raise ValueError(f"无法解析的 SQL: {sql}")
+
+    body_part  = m.group("body").strip()
+    table_name = m.group("table").strip()
+    where_part = m.group("where")  # 可能为 None
+
+    # 尝试在 body_part 里匹配窗口函数的语法
+    # window_pattern 会把:
+    #   "col1, col2, ROW_NUMBER() OVER (PARTITION BY grp_col ORDER BY sort_col DESC) AS row_num"
+    # 拆成三部分：普通列列表、grp_col、sort_col、以及窗口列别名
+    window_pattern = re.compile(
+        r"^(?P<cols>.*?)\s*,\s*"
+        r"ROW_NUMBER\s*\(\s*\)\s*OVER\s*\(\s*PARTITION\s+BY\s+(?P<grp>\w+)\s+"
+        r"ORDER\s+BY\s+(?P<sort>\w+)\s+DESC\s*\)\s*(?:AS\s+(?P<alias>\w+))?$",
+        flags=re.IGNORECASE | re.DOTALL
+    )
+    mw = window_pattern.match(body_part)
+    if mw:
+        select_cols_raw = mw.group("cols").strip()
+        select_cols = [c.strip() for c in select_cols_raw.split(",") if c.strip()]
+        grp_col = mw.group("grp").strip()
+        sort_col = mw.group("sort").strip()
+        alias_for_window = mw.group("alias")
+        # 解析 WHERE 部分
+        if where_part is None:
+            where_pred = None
+        else:
+            where_fixed = add_spaces(where_part.strip())
+            tokens = re.split(r"\s+", where_fixed)
+
+            def parse_simple(tok_list, i):
+                if i + 2 >= len(tok_list):
+                    raise ValueError(f"无法解析条件：{' '.join(tok_list[i:])}")
+                col = tok_list[i]
+                op  = tok_list[i + 1]
+                val = tok_list[i + 2]
+                if (val.startswith("'") and val.endswith("'")) or \
+                   (val.startswith('"') and val.endswith('"')):
+                    const = val[1:-1]
+                else:
+                    if re.match(r"^-?\d+$", val):
+                        const = int(val)
+                    else:
+                        try:
+                            const = float(val)
+                        except:
+                            const = val
+                return (col, op, const), i + 3
+
+            idx = 0
+            left_pred, idx = parse_simple(tokens, 0)
+            cur = left_pred
+            while idx < len(tokens):
+                logic = tokens[idx].upper()
+                if logic not in ("AND", "OR"):
+                    raise ValueError(f"预期 AND/OR，实际：{logic}")
+                idx += 1
+                right_pred, idx = parse_simple(tokens, idx)
+                cur = (cur, logic, right_pred)
+            where_pred = cur
+
+        return table_name, select_cols, where_pred, grp_col, sort_col, True, alias_for_window
+
+    # 如果没匹配到窗口函数，返回 is_window=False 让调用方退回给 parse_sql_with_agg
+    return None, None, None, None, None, False, None

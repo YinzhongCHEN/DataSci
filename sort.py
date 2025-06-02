@@ -97,7 +97,7 @@ def sort_and_time(
     first_tensor = next(iter(tensors.values()))
     tensor_on_cuda = first_tensor.is_cuda
     if use_cuda and tensor_on_cuda:
-        print("GPUTIME")
+        # print("GPUTIME")
         starter = torch.cuda.Event(enable_timing=True)
         ender   = torch.cuda.Event(enable_timing=True)
         starter.record()
@@ -129,7 +129,7 @@ def sort_and_time(
         tensor_elapsed = (time.time() - start_cpu) * 1000.0
 
     # 3. 打印结果
-    print(f"Pandas 排序耗时：{pandas_elapsed_ms:.3f} ms，排序后行数：{sorted_df_pd.shape[0]}")
+    # print(f"Pandas 排序耗时：{pandas_elapsed_ms:.3f} ms，排序后行数：{sorted_df_pd.shape[0]}")
     print(f"Tensor 排序耗时：{tensor_elapsed:.3f} ms，排序后行数：{sorted_tensors[next(iter(sorted_tensors))].shape[0]}")
 
     return sorted_df_pd, sorted_tensors
