@@ -30,7 +30,8 @@ def main():
         # 你可以继续添加其它表
     }
 
-    df_result, tensor_result = execute_sql_with_all_support(
+    # df_result, 
+    tensor_result = execute_sql_with_all_support(
         sql=args.sql,
         table_to_path=table_to_path,
         order_by=args.order_by,
@@ -38,9 +39,9 @@ def main():
         nrows=args.nrows
     )
 
-    print("\n===== 最终返回 DataFrame =====")
-    print(df_result.head())
-    print(f"(共 {df_result.shape[0]} 行，{df_result.shape[1]} 列)")
+    # print("\n===== 最终返回 DataFrame =====")
+    # print(df_result.head())
+    # print(f"(共 {df_result.shape[0]} 行，{df_result.shape[1]} 列)")
     # 如果需要查看 tensor 输出，可以打印 tensor_result.keys()
 
 if __name__ == "__main__":

@@ -51,9 +51,8 @@ def load_data(csv_path,usecols, nrows=None):
                 continue
         
         tensors[col] = tensor
-    print("目标设备：", device)
+    # print("目标设备：", device)
     if device.type == 'cuda':
-        print("当前 CUDA 设备索引：", torch.cuda.current_device())
-        print("CUDA 设备名称：", torch.cuda.get_device_name(torch.cuda.current_device()))
+        print("[DEVICE] CUDA 设备名称：", torch.cuda.get_device_name(torch.cuda.current_device()))
     
     return tensors, df

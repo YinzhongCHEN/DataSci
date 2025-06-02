@@ -65,7 +65,7 @@ def tensor_multi_sort(tensors: dict, sort_keys: list, descending: bool=False):
     return sorted_tensors, final_sorted_idx
 def sort_and_time(
     tensors: dict,
-    df: pd.DataFrame,
+    # df: pd.DataFrame,
     sort_key: str,
     descending: bool = False
 ):
@@ -87,12 +87,12 @@ def sort_and_time(
         pd_sort_cols = [sort_key]
     else:
         pd_sort_cols = sort_key
-    start_time = time.time()
-    # 注意：这里只按单列 sort_key 排序，并重置索引
-    sorted_df_pd = pandas_sort(df, pd_sort_cols)[df.columns]
-    pandas_elapsed_ms = (time.time() - start_time) * 1000.0
+    # start_time = time.time()
+    # # 注意：这里只按单列 sort_key 排序，并重置索引
+    # sorted_df_pd = pandas_sort(df, pd_sort_cols)[df.columns]
+    # pandas_elapsed_ms = (time.time() - start_time) * 1000.0
 
-    # 根据是否可用 GPU 选择计时方式
+    # 根据是否可用 GPU 选择TIME方式
     use_cuda = torch.cuda.is_available()
     first_tensor = next(iter(tensors.values()))
     tensor_on_cuda = first_tensor.is_cuda
@@ -130,6 +130,7 @@ def sort_and_time(
 
     # 3. 打印结果
     # print(f"Pandas 排序耗时：{pandas_elapsed_ms:.3f} ms，排序后行数：{sorted_df_pd.shape[0]}")
-    print(f"Tensor 排序耗时：{tensor_elapsed:.3f} ms，排序后行数：{sorted_tensors[next(iter(sorted_tensors))].shape[0]}")
+    print(f"[TIME] Tensor 排序耗时：{tensor_elapsed:.3f} ms，排序后行数：{sorted_tensors[next(iter(sorted_tensors))].shape[0]}")
 
-    return sorted_df_pd, sorted_tensors
+    #return sorted_df_pd, sorted_tensors
+    return sorted_tensors
